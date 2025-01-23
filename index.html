@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>user management</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    table, th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+    form { margin-bottom: 20px; }
+    input, button { padding: 10px; margin-right: 5px; }
+  </style>
+</head>
+<body>
+  <h1>user management</h1>
+
+  <form id="itemForm">
+    <input type="text" id="name" placeholder="Name" required>
+    <input type="text" id="description" placeholder="Description" required>
+    <button type="submit">Add/Update Item</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="itemsTable"></tbody>
+  </table>
+
+  <script>
+    const apiUrl = 'http://localhost:5000/items';
+    const form = document.getElementById('itemForm');
+    const nameInput = document.getElementById('name');
+    const descriptionInput = document.getElementById('description');
+    const itemsTable = document.getElementById('itemsTable');
+    let editingItemId = null;
+
+    async function fetchItems() {
+      const res = await fetch(apiUrl);
+      const items = await res.json();
+      itemsTable.innerHTML = items.map(item => `
+        <tr>
+          <td>${item.name}</td>
+          <td>${item.description}</td>
+          <td>
+            <button onclick="editItem('${item._id}')">Edit</button>
+            <button onclick="deleteItem('${item._id}')">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const data = {
+        name: nameInput.value,
+        description: descriptionInput.value,
+      };
+      if (editingItemId) {
+        await fetch(`${apiUrl}/${editingItemId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        editingItemId = null;
+      } else {
+        await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+      }
+      form.reset();
+      fetchItems();
+    };
+
+    window.editItem = async (id) => {
+      const res = await fetch(`${apiUrl}/${id}`);
+      const item = await res.json();
+      nameInput.value = item.name;
+      descriptionInput.value = item.description;
+      editingItemId = id;
+    };
+
+    window.deleteItem = async (id) => {
+      await fetch(`${apiUrl}/${id}`, { method: 'DELETE' });
+      fetchItems();
+    };
+
+    fetchItems();
+  </script>
+</body>
+</html>
